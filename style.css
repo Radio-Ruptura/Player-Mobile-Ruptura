@@ -39,6 +39,9 @@ body {
     justify-content: center;
     align-items: center;
 
+    animation-name: getCloser;
+    animation-duration: 0.5s;
+
     border-radius: var(--r);
     border: 1px solid rgba(255, 255, 255, 0.55);
 
@@ -183,4 +186,12 @@ span{
         animation: none !important;
         transition: none !important;
     }
+}
+
+.liveWarning{
+    display: none;
+    position: fixed;
+    bottom: 90px;
+    width: calc(100% - 64px);
+    padding: 24px;
 }

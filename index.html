@@ -21,7 +21,7 @@
 
     <audio id="radioFile" preload="none">
         <source
-            src="https://maquinarama.tailf176e0.ts.net/radio"
+            src="https://maquinarama.tailf176e0.ts.net/listen/ruptura/radio.mp3"
             type="audio/mpeg">
     </audio>
 
@@ -33,6 +33,11 @@
         <div class="music box" style="border-radius: 48px;">
             <img src="https://placehold.co/220?text=Toque na tela!" id="albumCover">
         </div>
+    </div>
+
+    <div class="box start-btn liveWarning" id="liveWarning">
+        <h2>Estamos no Ar!</h2><hr>
+        <p>Tem um apresentador ao vivo agora</p>
     </div>
 
     <marquee class="bottom box start-btn" style="width: calc(100% - 48px);" id="bottom-info">
@@ -138,7 +143,7 @@
 
                 try {
                     const response = await fetch(
-                        'https://maquinarama.tailf176e0.ts.net/songInfo',
+                        'https://maquinarama.tailf176e0.ts.net/api/nowplaying/1',
                         { cache: 'no-store' }
                     );
 
@@ -149,11 +154,17 @@
                     if (!playing) return;
 
                     printInfo(
-                        `${data.songName} - ${data.songArtist} - ${data.songAlbum}`
+                        `${data.now_playing.song.text}`
                     );
 
-                    if (data.songAlbumCover) {
-                        changeAlbumCover(data.songAlbumCover);
+                    if (data.live.is_live == true) {
+                        document.getElementById("liveWarning").style.display = "block";
+                    } else {
+                        document.getElementById("liveWarning").style.display = "none";
+                    }
+
+                    if (data.now_playing.song.art) {
+                        changeAlbumCover(data.now_playing.song.art);
                     }
 
                     updateMediaSession(data);
