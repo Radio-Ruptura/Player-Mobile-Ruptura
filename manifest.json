@@ -1,0 +1,13 @@
+{
+  "name": "Rádio Ruptura",
+  "icons": [
+    {
+      "src": "-ufeFBHS_400x400.jpg",
+      "type": "image/jpg",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "prefer_related_applications": false
+}

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <link rel="manifest" href="manifest.json" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Ruptura</title>
+    <link href="animation.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="backdrop">
+        <div class="shape one"></div>
+        <div class="shape two"></div>
+        <div class="shape three"></div>
+        <div class="shape four"></div>
+        <div class="shape five"></div>
+        <div class="shape six"></div>
+        <div class="shape seven"></div>
+    </div>
+
+    <audio id="radioFile" preload="none">
+        <source
+            src="https://maquinarama.tailf176e0.ts.net/radio"
+            type="audio/mpeg">
+    </audio>
+
+    <marquee class="top box start-btn" style="width: calc(100% - 48px);" id="top-info">
+        Toque na tela para começar a ouvir
+    </marquee>
+
+    <div class="container">
+        <div class="music box" style="border-radius: 48px;">
+            <img src="https://placehold.co/220?text=Toque na tela!" id="albumCover">
+        </div>
+    </div>
+
+    <marquee class="bottom box start-btn" style="width: calc(100% - 48px);" id="bottom-info">
+        Toque na tela para começar a ouvir
+    </marquee>
+
+    <script>   
+        (() => {
+            'use strict';
+
+            const radio = document.getElementById('radioFile');
+            const topInfo = document.getElementById('top-info');
+            const bottomInfo = document.getElementById('bottom-info');
+            const albumCover = document.getElementById('albumCover');
+
+            let playing = false;
+            let starting = false;
+            let pageActive = !document.hidden;
+            let lastError = 0;
+
+            const ERROR_IMAGE = 'https://placehold.co/220?text=ERRO!';
+            const LOADING_IMAGE = 'https://placehold.co/220?text=Carregando...';
+
+            function printInfo(info) {
+                if (topInfo.textContent !== info) {
+                    topInfo.textContent = info;
+                    bottomInfo.textContent = info;
+                }
+            }
+
+            if ('mediaSession' in navigator) {
+
+                try {
+                    navigator.mediaSession.setActionHandler('play', null);
+                    navigator.mediaSession.setActionHandler('pause', null);
+
+                    navigator.mediaSession.setActionHandler('stop', () => {
+                        radio.pause();
+                        radio.currentTime = 0;
+
+                        playing = false;
+                        starting = false;
+
+                        navigator.mediaSession.playbackState = 'none';
+
+                        printInfo('Rádio parada');
+                        changeAlbumCover('https://placehold.co/220?text=Ruptura');
+                    });
+
+                } catch (error) {
+                    console.warn('Media Session:', error);
+                }
+
+            }
+
+            function updateMediaSession(data) {
+                if (!('mediaSession' in navigator)) return;
+
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: data.songName || 'Ruptura',
+                    artist: data.songArtist || 'Rádio ao Vivo',
+                    album: data.songAlbum || 'Ruptura',
+                    artwork: [
+                        {
+                            src: data.songAlbumCover || ERROR_IMAGE,
+                            sizes: '96x96',
+                            type: 'image/jpeg'
+                        },
+                        {
+                            src: data.songAlbumCover || ERROR_IMAGE,
+                            sizes: '128x128',
+                            type: 'image/jpeg'
+                        },
+                        {
+                            src: data.songAlbumCover || ERROR_IMAGE,
+                            sizes: '256x256',
+                            type: 'image/jpeg'
+                        },
+                        {
+                            src: data.songAlbumCover || ERROR_IMAGE,
+                            sizes: '512x512',
+                            type: 'image/jpeg'
+                        }
+                    ]
+                });
+
+                navigator.mediaSession.playbackState = 'playing';
+            }
+
+            function changeAlbumCover(url) {
+                if (url && albumCover.src !== url) {
+                    albumCover.src = url;
+                }
+            }
+                        
+            let songUpdateTimer = null;
+            let fetchingSong = false;
+
+            async function getSongData() {
+                if (fetchingSong || !playing) return;
+
+                fetchingSong = true;
+
+                try {
+                    const response = await fetch(
+                        'https://maquinarama.tailf176e0.ts.net/songInfo',
+                        { cache: 'no-store' }
+                    );
+
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                    const data = await response.json();
+
+                    if (!playing) return;
+
+                    printInfo(
+                        `${data.songName} - ${data.songArtist} - ${data.songAlbum}`
+                    );
+
+                    if (data.songAlbumCover) {
+                        changeAlbumCover(data.songAlbumCover);
+                    }
+
+                    updateMediaSession(data);
+
+                } catch (error) {
+                    console.warn('Erro ao atualizar música:', error);
+                } finally {
+                    fetchingSong = false;
+
+                    if (playing) {
+                        songUpdateTimer = setTimeout(getSongData, 15000);
+                    }
+                }
+            }
+
+
+            function showError() {
+                if (document.hidden || !pageActive) return;
+
+                const now = Date.now();
+
+                if (now - lastError < 10000) return;
+
+                lastError = now;
+                playing = false;
+                starting = false;
+
+                printInfo('RÁDIO INDISPONÍVEL');
+                changeAlbumCover(ERROR_IMAGE);
+
+                console.warn('A transmissão foi interrompida.');
+            }
+
+            radio.addEventListener('playing', () => {
+                playing = true;
+                starting = false;
+
+                printInfo('Tocando Ao Vivo');
+                getSongData();
+            });
+
+            radio.addEventListener('error', () => {
+                if (!document.hidden && pageActive) {
+                    showError();
+                }
+            });
+
+            radio.addEventListener('ended', () => {
+                if (!document.hidden && pageActive) {
+                    showError();
+                }
+            });
+
+            radio.addEventListener('stalled', () => {
+                console.log('Aguardando dados da transmissão...');
+            });
+
+            radio.addEventListener('waiting', () => {
+                console.log('Buffer da transmissão...');
+            });
+
+            radio.addEventListener('pause', () => {
+                if (document.hidden) return;
+
+                playing = false;
+            });
+
+            document.addEventListener('visibilitychange', () => {
+                pageActive = !document.hidden;
+
+                if (!pageActive) return;
+
+                if (radio.paused && !starting) {
+                    playing = false;
+                    printInfo('Toque na tela para voltar a ouvir');
+                } else if (!radio.paused && !radio.error) {
+                    playing = true;
+                }
+            });
+
+            document.addEventListener('click', async () => {
+                if (playing || starting) return;
+
+                starting = true;
+
+                printInfo('Conectando à rádio...');
+                changeAlbumCover(LOADING_IMAGE);
+
+                try {
+                    await radio.play();
+
+                    console.log('Play solicitado');
+                } catch (error) {
+                    starting = false;
+
+                    if (document.hidden) return;
+
+                    console.error('Falha ao iniciar:', error);
+
+                    printInfo('Não foi possível iniciar. Toque novamente.');
+                }
+            }, { passive: true });
+
+        })();
+
+    </script>
+</body>
+</html>
